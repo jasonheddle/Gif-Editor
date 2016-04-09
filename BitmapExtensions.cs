@@ -1,18 +1,4 @@
-﻿//Copyright (C) 2016 Jason Heddle
-
-//Licensed under the Apache License, Version 2.0 (the "License");
-//you may not use this file except in compliance with the License.
-//You may obtain a copy of the License at
-
-//   http://www.apache.org/licenses/LICENSE-2.0
-
-//Unless required by applicable law or agreed to in writing, software
-//distributed under the License is distributed on an "AS IS" BASIS,
-//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//See the License for the specific language governing permissions and
-//limitations under the License.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -55,6 +41,46 @@ namespace GIF_Editor
             return retval;
         }
 
+        public static BitmapSource ToBitmapSource(this Bitmap bitmap)
+        {
+            if (bitmap == null)
+                throw new ArgumentNullException("bitmap");
+
+            lock (bitmap)
+            {
+                IntPtr hBitmap = bitmap.GetHbitmap();
+
+                try
+                {
+                    return Imaging.CreateBitmapSourceFromHBitmap(
+                        hBitmap,
+                        IntPtr.Zero,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
+                }
+                finally
+                {
+                    DeleteObject(hBitmap);
+                }
+            }
+        }
+
+        public static BitmapImage ToImageSource(this Bitmap bitmap)
+        {
+            using (MemoryStream memory = new MemoryStream())
+            {
+                bitmap.Save(memory, ImageFormat.Bmp);
+                memory.Position = 0;
+                BitmapImage bitmapimage = new BitmapImage();
+                bitmapimage.BeginInit();
+                bitmapimage.StreamSource = memory;
+                bitmapimage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapimage.EndInit();
+
+                return bitmapimage;
+            }
+        }
+
         /// <summary>
         /// Converts BitmapSource to BitmapImage
         /// </summary>
@@ -82,17 +108,39 @@ namespace GIF_Editor
         /// </summary>
         /// <param name="writeableBitmap"></param>
         /// <returns>A Bitmap of the WriteableBitmap</returns>
-        public static Bitmap ToBitmap(this WriteableBitmap writeBmp)
+        public static Bitmap ToBitmap(this WriteableBitmap wb)
         {
-            Bitmap bmp;
-            using (MemoryStream outStream = new MemoryStream())
+            return wb.ToBitmapImage().ToBitmap();
+        }
+
+        public static BitmapImage ToBitmapImage(this WriteableBitmap wbm)
+        {
+            BitmapImage bmImage = new BitmapImage();
+            using (MemoryStream stream = new MemoryStream())
             {
-                BitmapEncoder enc = new BmpBitmapEncoder();
-                enc.Frames.Add(BitmapFrame.Create((BitmapSource)writeBmp));
-                enc.Save(outStream);
-                bmp = new Bitmap(outStream);
+                PngBitmapEncoder encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(wbm));
+                encoder.Save(stream);
+                bmImage.BeginInit();
+                bmImage.CacheOption = BitmapCacheOption.OnLoad;
+                bmImage.StreamSource = stream;
+                bmImage.EndInit();
+                bmImage.Freeze();
             }
-            return bmp;
+            return bmImage;
+        }
+
+        public static Bitmap ToBitmap(this BitmapImage bitmapImage)
+        {
+            using (MemoryStream mse = new MemoryStream())
+            {
+                Bitmap b = new Bitmap((int)bitmapImage.Width, (int)bitmapImage.Height, PixelFormat.Format32bppArgb);
+                PngBitmapEncoder e = new PngBitmapEncoder();
+                e.Frames.Add(BitmapFrame.Create(bitmapImage));
+                e.Save(mse);
+                b = new Bitmap(mse);
+                return b;
+            }
         }
 
         /// <summary>
@@ -110,7 +158,7 @@ namespace GIF_Editor
             {
                 ptr = Marshal.AllocHGlobal(height * stride);
                 srs.CopyPixels(new Int32Rect(0, 0, width, height), ptr, height * stride, stride);
-                using (var btm = new Bitmap(width, height, stride, PixelFormat.Format1bppIndexed, ptr))
+                using (var btm = new Bitmap(width, height, stride, PixelFormat.Format32bppArgb, ptr))
                 {
                     return new Bitmap(btm);
                 }
@@ -129,7 +177,7 @@ namespace GIF_Editor
         /// <returns>A WriteableBitmap of the Bitmap</returns>
         public static WriteableBitmap ToWritableBitmap(this Bitmap b)
         {
-            return new WriteableBitmap(b.ToBitmapImage());
+            return new WriteableBitmap(b.ToBitmapSource());
         }
 
         /// <summary>
@@ -139,12 +187,14 @@ namespace GIF_Editor
         /// <returns>An Image of the ImageSource</returns>
         public static Image ToImage(this System.Windows.Media.ImageSource image)
         {
-            MemoryStream ms = new MemoryStream();
-            var encoder = new BmpBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(image as BitmapSource));
-            encoder.Save(ms);
-            ms.Flush();
-            return Image.FromStream(ms);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                var encoder = new BmpBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(image as BitmapSource));
+                encoder.Save(ms);
+                ms.Flush();
+                return Image.FromStream(ms);
+            }
         }
 
         /// <summary>
@@ -155,6 +205,23 @@ namespace GIF_Editor
         public static Bitmap ToBitmap(this System.Windows.Media.ImageSource image)
         {
             return new Bitmap(image.ToImage());
+        }
+
+        public static Bitmap ToBitmap(this byte[] bytes)
+        {
+            var imageConverter = new ImageConverter();
+            var image = (Image)imageConverter.ConvertFrom(bytes);
+            return new Bitmap(image);
+        }
+
+        public static Bitmap Resize(this Bitmap imgToResize, System.Drawing.Size size)
+        {
+            return new Bitmap(imgToResize, size);
+        }
+
+        public static Bitmap Resize(this Bitmap imgToResize, int width, int height)
+        {
+            return new Bitmap(imgToResize, new System.Drawing.Size(width, height));
         }
     }
 }

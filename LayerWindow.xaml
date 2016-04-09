@@ -1,0 +1,22 @@
+﻿<Window x:Class="GIF_Editor.LayerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GIF_Editor"
+        mc:Ignorable="d"
+        Title="" Height="250" Width="200">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="20"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <ListView Name="layerList" SelectionChanged="layerList_SelectionChanged" Grid.ColumnSpan="2"/>
+        <Button Name="removeButton" Grid.Row="1" Click="removeButton_Click" Content="Remove"/>
+        <Button Name="addButton" Grid.Row="1" Grid.Column="1" Click="addButton_Click" Content="Add"/>
+    </Grid>
+</Window>

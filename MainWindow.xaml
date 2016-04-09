@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:GIF_Editor"
         mc:Ignorable="d"
         Title="Gif Editor" Height="350" Width="525" x:Name="Main" MouseUp="Main_MouseUp"
-        MouseLeave="Main_MouseLeave" MouseEnter="Main_MouseEnter">
+        MouseLeave="Main_MouseLeave" MouseEnter="Main_MouseEnter"
+        Loaded="Main_Loaded" Closed="Main_Closed">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
@@ -40,18 +41,21 @@
             <MenuItem Header="_Tools">
                 <MenuItem Name="colorSelection" Header="_Color" Click="colorSelection_Click"/>
                 <Separator/>
-                <MenuItem Name="pencilButton" Header="_Pencil" Click="pencilButton_Click"/>
-                <MenuItem Name="eraseButton" Header="_Eraser" Click="eraseButton_Click"/>
-                <MenuItem Name="dropperButton" Header="_Dropper" Click="dropperButton_Click"/>
-                <MenuItem Name="lineButton" Header="_Line" Click="lineButton_Click"/>
-                <MenuItem Name="paintbrushButton" Header="_PaintBrush" Click="paintbrushButton_Click"/>
+                <MenuItem Name="pencilButton" Header="_Pencil" Click="pencilButton_Click" IsCheckable="True"/>
+                <MenuItem Name="eraserButton" Header="_Eraser" Click="eraseButton_Click" IsCheckable="True"/>
+                <MenuItem Name="dropperButton" Header="_Dropper" Click="dropperButton_Click" IsCheckable="True"/>
+                <MenuItem Name="lineButton" Header="_Line" Click="lineButton_Click" IsCheckable="True"/>
+                <MenuItem Name="paintbrushButton" Header="_PaintBrush" Click="paintbrushButton_Click" IsCheckable="True"/>
+                <Separator/>
+                <MenuItem Name="resizeButton" Header="_Resize" Click="resizeButton_Click" IsCheckable="True"/>
+                <MenuItem Name="rotateButton" Header="_Rotate" Click="rotateButton_Click" IsCheckable="True"/>
             </MenuItem>
         </Menu>
         <ScrollViewer Grid.Row="1" Grid.ColumnSpan="5" HorizontalScrollBarVisibility="Visible">
             <Image Name="imageBox" MouseLeftButtonDown="imageBox_MouseLeftButtonDown" MouseMove="imageBox_MouseMove" MouseLeave="imageBox_MouseLeave" MouseEnter="imageBox_MouseEnter"/>
         </ScrollViewer>
         <StackPanel Grid.Row="3" Grid.Column="2">
-            <Slider Name="thicknessSlider" Value="10" Maximum="100" Minimum="2" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="thicknessSlider_ValueChanged"/>
+            <Slider Name="thicknessSlider" Value="10" Maximum="30" Minimum="2" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="thicknessSlider_ValueChanged"/>
             <TextBlock Name="thicknessTextBlock" VerticalAlignment="Center" TextAlignment="Center">
                 Thickness: <Run Text="{Binding Value, ElementName=thicknessSlider}"/>
             </TextBlock>

@@ -1,18 +1,4 @@
-﻿//Copyright (C) 2016 Jason Heddle
-
-//Licensed under the Apache License, Version 2.0 (the "License");
-//you may not use this file except in compliance with the License.
-//You may obtain a copy of the License at
-
-//   http://www.apache.org/licenses/LICENSE-2.0
-
-//Unless required by applicable law or agreed to in writing, software
-//distributed under the License is distributed on an "AS IS" BASIS,
-//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//See the License for the specific language governing permissions and
-//limitations under the License.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -60,6 +46,33 @@ namespace GIF_Editor
             bmp1.UnlockBits(bmpData1);
             bmp2.UnlockBits(bmpData2);
             return equals;
+        }
+
+        /// <summary>
+        /// Merges an array of bitmaps into one bitmap
+        /// </summary>
+        /// <param name="bitmaps"></param>
+        /// <param name="size"></param>
+        /// <returns></returns>
+        public static Bitmap MergeBitmaps(Bitmap[] bitmaps, Size size)
+        {
+            Bitmap finalBitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppArgb);
+            finalBitmap.MakeTransparent();
+            using (Graphics g = Graphics.FromImage(finalBitmap))
+            {
+
+                foreach (var bitmap in bitmaps)
+                {
+                    g.DrawImage(bitmap, (size.Width - bitmap.Width) / 2, (size.Height - bitmap.Height) / 2);
+                }
+
+                return finalBitmap;
+            }
+        }
+
+        public static Bitmap MergeBitmaps(Bitmap[] bitmaps, int width, int height)
+        {
+            return MergeBitmaps(bitmaps, new Size(width, height));
         }
     }
 }

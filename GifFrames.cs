@@ -1,18 +1,4 @@
-﻿//Copyright (C) 2016 Jason Heddle
-
-//Licensed under the Apache License, Version 2.0 (the "License");
-//you may not use this file except in compliance with the License.
-//You may obtain a copy of the License at
-
-//   http://www.apache.org/licenses/LICENSE-2.0
-
-//Unless required by applicable law or agreed to in writing, software
-//distributed under the License is distributed on an "AS IS" BASIS,
-//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//See the License for the specific language governing permissions and
-//limitations under the License.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,14 +8,17 @@ using System.Drawing.Imaging;
 using System.Windows.Media.Imaging;
 using System.IO;
 using System.Windows;
+using System.Threading;
 
 namespace GIF_Editor
 {
     public class GifFrames
     {
-        public List<Bitmap> frames;
-        List<Bitmap> originalFrames;
+        public List<List<Bitmap>> frames = new List<List<Bitmap>>();
+        List<List<Bitmap>> originalFrames = new List<List<Bitmap>>();
         public int currentFrame = 0;
+        public int currentLayer = 0;
+
 
         static Bitmap[] ToGifFrames(Bitmap b)
         {
@@ -52,8 +41,21 @@ namespace GIF_Editor
         /// <param name="gifBitmap">The bitmap to change split into seperate frames</param>
         public GifFrames(Bitmap b)
         {
-            frames = ToGifFrames(b).ToList();
-            originalFrames = frames;
+            Bitmap[] tempFrames = ToGifFrames(b);
+
+            for (int i = 0; i < tempFrames.Length; i++)
+            {
+                frames.Add(new List<Bitmap>());
+                frames[i].Add(tempFrames[i]);
+            }
+
+            Bitmap[] tempFramesTwo = ToGifFrames(b);
+
+            for (int i = 0; i < tempFrames.Length; i++)
+            {
+                originalFrames.Add(new List<Bitmap>());
+                originalFrames[i].Add(tempFramesTwo[i]);
+            }
         }
 
         /// <summary>
@@ -62,23 +64,47 @@ namespace GIF_Editor
         /// <param name="gifFilePath"></param>
         public GifFrames(string filePath)
         {
-            frames = ToGifFrames(new Bitmap(filePath)).ToList();
-            originalFrames = frames;
+            Bitmap[] tempFrames = ToGifFrames(new Bitmap(filePath));
+
+            for (int i = 0; i < tempFrames.Length; i++)
+            {
+                frames.Add(new List<Bitmap>());
+                frames[i].Add(tempFrames[i]);
+            }
+
+            Bitmap[] tempFramesTwo = ToGifFrames(new Bitmap(filePath));
+
+            for (int i = 0; i < tempFrames.Length; i++)
+            {
+                originalFrames.Add(new List<Bitmap>());
+                originalFrames[i].Add(tempFramesTwo[i]);
+            }
         }
 
         /// <summary>
         /// Sets the next frame of the GifFrame object
         /// </summary>
         /// <returns>The next frame</returns>
-        public Bitmap Next()
+        public Bitmap NextBackground()
         {
             if (currentFrame < frames.Count - 1)
             {
+                currentLayer = 0;
                 currentFrame += 1;
-                return frames[currentFrame];
+                return frames[currentFrame][currentLayer];
             }
             else
                 return null;
+        }
+
+        public Bitmap Next()
+        {
+            if (!(currentFrame < frames.Count - 1))
+                return null;
+
+            currentLayer = 0;
+            currentFrame++;
+            return BitmapSharp.MergeBitmaps(frames[currentFrame].ToArray(), frames[0][0].Width, frames[0][0].Height);
         }
 
         /// <summary>
@@ -87,7 +113,12 @@ namespace GIF_Editor
         /// <returns>The current frame</returns>
         public Bitmap GetFrame()
         {
-            return frames[currentFrame];
+            return BitmapSharp.MergeBitmaps(frames[currentFrame].ToArray(), frames[0][0].Width, frames[0][0].Height);
+        }
+
+        public Bitmap GetCurrentLayer()
+        {
+            return frames[currentFrame][currentLayer];
         }
 
         /// <summary>
@@ -95,12 +126,12 @@ namespace GIF_Editor
         /// </summary>
         /// <param name="frameNumber">The frame that is wanted</param>
         /// <returns></returns>
-        public Bitmap GetFrame(int frameNumber)
+        public Bitmap GetFrame(int frameNumber, int layerNumber)
         {
             if (frameNumber > frames.Count || frameNumber < 0)
                 throw new IndexOutOfRangeException("The frameNumber must be within the GifFrames frame amount");
 
-            return frames[frameNumber];
+            return frames[frameNumber][layerNumber];
         }
 
         /// <summary>
@@ -119,24 +150,35 @@ namespace GIF_Editor
         /// Sets the currentframe of the GifFrame object to 1 less
         /// </summary>
         /// <returns>The previous frame</returns>
-        public Bitmap Previous()
+        public Bitmap PreviousBackground()
         {
             if (currentFrame > 0)
             {
+                currentLayer = 0;
                 currentFrame -= 1;
-                return frames[currentFrame];
+                return frames[currentFrame][currentLayer];
             }
             else
                 return null;
+        }
+
+        public Bitmap Previous()
+        {
+            if (!(currentFrame > 0))
+                return null;
+
+            currentLayer = 0;
+            currentFrame--;
+            return BitmapSharp.MergeBitmaps(frames[currentFrame].ToArray(), frames[0][0].Width, frames[0][0].Height);
         }
 
         /// <summary>
         /// Sets the current frame to the bitmap
         /// </summary>
         /// <param name="frame">The bitmap that the frame will be set to</param>
-        public void SetFrame(Bitmap frame)
+        public void SetFrame(Bitmap frame, int layer)
         {
-            frames[currentFrame] = frame;
+            frames[currentFrame][layer] = frame;
         }
 
         /// <summary>
@@ -145,7 +187,7 @@ namespace GIF_Editor
         /// <returns>Width of the gif in pixels</returns>
         public int Width()
         {
-            return frames[0].Width;
+            return frames[0][0].Width;
         }
 
         /// <summary>
@@ -154,7 +196,7 @@ namespace GIF_Editor
         /// <returns>Height of gif in pixels</returns>
         public int Height()
         {
-            return frames[0].Height;
+            return frames[0][0].Height;
         }
 
         /// <summary>
@@ -162,12 +204,13 @@ namespace GIF_Editor
         /// </summary>
         /// <param name="frame">The bitmap that the frame will be set to</param>
         /// <param name="frameNumber">The frame that the bitmap will be set to</param>
-        public void SetFrame(Bitmap frame, int frameNumber)
+        /// <param name="layer">The layer to set the bitmap to</param>
+        public void SetFrame(Bitmap frame, int frameNumber, int layer)
         {
             if (frameNumber > frames.Count || frameNumber < 0)
                 throw new IndexOutOfRangeException("The frameNumber must be within the GifFrames frame amount");
 
-            frames[frameNumber] = frame;
+            frames[frameNumber][layer] = frame;
         }
 
         /// <summary>
@@ -179,7 +222,7 @@ namespace GIF_Editor
         {
             GifBitmapEncoder gEnc = new GifBitmapEncoder();
 
-            foreach (Bitmap bmpImage in frames)
+            foreach (Bitmap bmpImage in frames[currentLayer])
             {
                 var src = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(bmpImage.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
                 gEnc.Frames.Add(BitmapFrame.Create(src));
@@ -196,7 +239,12 @@ namespace GIF_Editor
         /// <returns>Original frame of the current frame</returns>
         public Bitmap GetOriginalFrame()
         {
-            return originalFrames[currentFrame];
+            return originalFrames[currentFrame][currentLayer];
+        }
+
+        public Bitmap[] GetOriginalFrameLayers()
+        {
+            return originalFrames[currentFrame].ToArray();
         }
 
         /// <summary>
@@ -204,12 +252,12 @@ namespace GIF_Editor
         /// </summary>
         /// <param name="frameNumber"></param>
         /// <returns>The orginal frame specified</returns>
-        public Bitmap GetOriginalFrame(int frameNumber)
+        public Bitmap GetOriginalFrame(int frameNumber, int layer)
         {
             if (frameNumber > frames.Count || frameNumber < 0)
                 throw new IndexOutOfRangeException("The frameNumber must be within the GifFrames frame amount");
 
-            return originalFrames[frameNumber];
+            return originalFrames[frameNumber][layer];
         }
 
         /// <summary>
@@ -217,30 +265,96 @@ namespace GIF_Editor
         /// </summary>
         public void AddFrame()
         {
-            Bitmap b = new Bitmap(frames[0].Width, frames[0].Height);
+            Bitmap b = new Bitmap(frames[0][0].Width, frames[0][0].Height, PixelFormat.Format32bppArgb);
 
             using (Graphics g = Graphics.FromImage(b))
             {
                 g.FillRectangle(Brushes.White, 0, 0, b.Width, b.Height);
-                frames.Add(new Bitmap(b.Width, b.Height, g));
-                originalFrames.Add(new Bitmap(b.Width, b.Height, g));
+                frames.Add(new List<Bitmap>());
+                frames[frames.Count].Add(new Bitmap(b.Width, b.Height, g));
+                originalFrames.Add(new List<Bitmap>());
+                originalFrames[originalFrames.Count].Add(new Bitmap(b.Width, b.Height, g));
             }
         }
 
         /// <summary>
-        /// Adds a frame at the specified index
+        /// Adds a layer to the current frame
         /// </summary>
-        /// <param name="index">The zero based index at which the item should be inserted</param>
-        public void AddFrame(int ins)
+        public void AddLayer()
         {
-            Bitmap b = new Bitmap(frames[0].Width, frames[0].Height);
+            Bitmap b = new Bitmap(frames[0][0].Width, frames[0][0].Height, PixelFormat.Format32bppArgb);
 
             using (Graphics g = Graphics.FromImage(b))
             {
-                g.FillRectangle(Brushes.White, 0, 0, b.Width, b.Height);
-                frames.Insert(ins, new Bitmap(b.Width, b.Height, g));
-                originalFrames.Insert(ins, new Bitmap(b.Width, b.Height, g));
+                g.FillRectangle(Brushes.Transparent, 0, 0, b.Width, b.Height);
+                frames[currentFrame].Add(new Bitmap(b.Width, b.Height, g));
+                originalFrames[currentFrame].Add(new Bitmap(b.Width, b.Height, g));
             }
+        }
+
+        /// <summary>
+        /// Sets the current layer up one
+        /// </summary>
+        public void LayerUp()
+        {
+            currentLayer++;
+        }
+
+        /// <summary>
+        /// Sets the current layer down one
+        /// </summary>
+        public void LayerDown()
+        {
+            currentLayer--;
+        }
+
+        /// <summary>
+        /// Sets the current layer of the current frame to the specified Bitmap
+        /// </summary>
+        /// <param name="frame">Frame to set</param>
+        public void SetFrame(Bitmap frame)
+        {
+            frames[currentFrame][currentLayer] = frame;
+        }
+
+        /// <summary>
+        /// Gets all layers on current frame
+        /// </summary>
+        /// <returns>All layers on current frame</returns>
+        public Bitmap[] GetCurrentFrameLayers()
+        {
+            Bitmap[] layers = new Bitmap[frames[currentFrame].Count];
+
+            for (int i = 0; i < layers.Length; i++)
+                layers[i] = frames[currentFrame][i];
+
+            return layers;
+        }
+
+        /// <summary>
+        /// Sets all the layers as long as the specified bitmap is the same length as the current frames layers
+        /// </summary>
+        /// <param name="layers">All the bitmaps to set the layers to</param>
+        public void SetAllLayers(Bitmap[] layers)
+        {
+            for (int i = 0; i < layers.Length; i++)
+                frames[currentFrame][i] = layers[i];
+        }
+
+        public int LayerCount()
+        {
+            return frames[currentFrame].Count;
+        }
+
+        public void RemoveLayer(int index)
+        {
+            frames[currentFrame].RemoveAt(index);
+        }
+
+        public void AddLayer(Bitmap layer)
+        {
+            frames[currentFrame].Add(layer);
+            originalFrames[currentFrame].Add(layer);
         }
     }
 }
