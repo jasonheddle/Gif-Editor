@@ -69,7 +69,7 @@ namespace GIF_Editor
         {
             using (MemoryStream memory = new MemoryStream())
             {
-                bitmap.Save(memory, ImageFormat.Bmp);
+                bitmap.Save(memory, ImageFormat.Png);
                 memory.Position = 0;
                 BitmapImage bitmapimage = new BitmapImage();
                 bitmapimage.BeginInit();
@@ -189,7 +189,7 @@ namespace GIF_Editor
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                var encoder = new BmpBitmapEncoder();
+                var encoder = new PngBitmapEncoder();
                 encoder.Frames.Add(BitmapFrame.Create(image as BitmapSource));
                 encoder.Save(ms);
                 ms.Flush();

@@ -51,8 +51,10 @@
                 <MenuItem Name="rotateButton" Header="_Rotate" Click="rotateButton_Click" IsCheckable="True"/>
             </MenuItem>
         </Menu>
-        <ScrollViewer Grid.Row="1" Grid.ColumnSpan="5" HorizontalScrollBarVisibility="Visible">
-            <Image Name="imageBox" MouseLeftButtonDown="imageBox_MouseLeftButtonDown" MouseMove="imageBox_MouseMove" MouseLeave="imageBox_MouseLeave" MouseEnter="imageBox_MouseEnter"/>
+        <ScrollViewer Grid.Row="1" Grid.ColumnSpan="5" HorizontalScrollBarVisibility="Visible" MouseMove="ScrollViewer_MouseMove" PreviewMouseLeftButtonDown="ScrollViewer_PreviewMouseLeftButtonDown">
+            <Grid Name="scrollViewerGrid" MouseLeftButtonDown="scrollViewerGrid_MouseLeftButtonDown" MouseMove="scrollViewerGrid_MouseMove" MouseLeave="scrollViewerGrid_MouseLeave" MouseEnter="scrollViewerGrid_MouseEnter">
+                <Image Name="imageBox" Stretch="None"/>
+            </Grid>
         </ScrollViewer>
         <StackPanel Grid.Row="3" Grid.Column="2">
             <Slider Name="thicknessSlider" Value="10" Maximum="30" Minimum="2" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="thicknessSlider_ValueChanged"/>

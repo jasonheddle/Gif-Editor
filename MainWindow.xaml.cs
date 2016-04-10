@@ -10,6 +10,12 @@ using System.Threading;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Media;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using Path = System.IO.Path;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
 
 namespace GIF_Editor
 {
@@ -38,11 +44,15 @@ namespace GIF_Editor
         Cursor eraser = new Cursor($@"{folder}\eraser.cur");
         Cursor dropper = new Cursor($@"{folder}\dropper.cur");
         Cursor paintbrush = new Cursor($@"{folder}\paintbrush.cur");
+        Cursor resizeLeft = new Cursor($@"{folder}\resize left.cur");
+        Cursor resizeRight = new Cursor($@"{folder}\resize right.cur");
         bool pencilSelected = false;
         bool eraserSelected = false;
         bool dropperSelected = false;
         bool lineSelected = false;
         bool paintbrushSelected = false;
+        bool resizeSelected = false;
+        bool rotateSelected = false;
         WriteableBitmap colorBitmap = new Bitmap(75, 25).ToWritableBitmap();
         RoutedEventArgs routedEventArgs = new RoutedEventArgs();
         bool ctrlPress = false;
@@ -65,11 +75,15 @@ namespace GIF_Editor
         internal static int selectedLayer = 0;
         Bitmap[] currentFrameLayers;
         public static MainWindow Current;
+        bool mainClick = false;
+        System.Windows.Point mainStartPoint;
+        System.Windows.Point mainEndPoint;
+        List<List<System.Windows.Controls.Image>> imageList = new List<List<System.Windows.Controls.Image>>();
 
         public MainWindow()
         {
             InitializeComponent();
-            Current = this;
+
             AddLayersToList();
 
             frameTextBlock.Text = $"Frame: 1 / {gifFrames.frames.Count}";
@@ -79,6 +93,7 @@ namespace GIF_Editor
                 undoList.Add(new LinkedList<Bitmap>());
                 redoList.Add(new LinkedList<Bitmap>());
                 editAmount.Add(0);
+                imageList.Add(new List<System.Windows.Controls.Image>());
             }
 
             for (int x = 0; x < colorBitmap.Width; x++)
@@ -96,6 +111,11 @@ namespace GIF_Editor
             previousFrame.IsEnabled = false;
             imageBox.Width = gifFrames.Width();
             imageBox.Height = gifFrames.Height();
+            scrollViewerGrid.Width = gifFrames.Width();
+            scrollViewerGrid.Height = gifFrames.Height();
+            scrollViewerGrid.Width = gifFrames.Width();
+            scrollViewerGrid.Height = gifFrames.Height();
+            Current = this;
         }
 
         private void previousFrame_Click(object sender, RoutedEventArgs e)
@@ -105,9 +125,20 @@ namespace GIF_Editor
                 pixelsEdited[i] = new bool[gifFrames.Width()];
 
             click = false;
-            gifFrames.SetAllLayers(currentFrameLayers);
-            imageBox.Source = gifFrames.Previous().ToWritableBitmap();
-            currentFrameLayers = gifFrames.GetCurrentFrameLayers();
+            gifFrames.SetFrame(imageBox.Source.ToBitmap(), 0);
+
+            for (int i = 1; i <= imageList[gifFrames.currentFrame].Count; i++)
+                gifFrames.SetFrame(imageList[gifFrames.currentFrame][i - 1].Source.ToBitmap(), i);
+
+            for (int i = 0; i < scrollViewerGrid.Children.Count; i++)
+                if (i != 0)
+                    scrollViewerGrid.Children.RemoveAt(i);
+
+            gifFrames.Previous();
+            imageBox.Source = gifFrames.GetFrame(0).ToWritableBitmap();
+
+            for (int i = 0; i < imageList[gifFrames.currentFrame].Count; i++)
+                    scrollViewerGrid.Children.Add(imageList[gifFrames.currentFrame][i]);
 
             if (gifFrames.currentFrame == 0)
                 previousFrame.IsEnabled = false;
@@ -129,9 +160,20 @@ namespace GIF_Editor
                 pixelsEdited[i] = new bool[gifFrames.Width()];
 
             click = false;
-            gifFrames.SetAllLayers(currentFrameLayers);
-            imageBox.Source = gifFrames.Next().ToWritableBitmap();
-            currentFrameLayers = gifFrames.GetCurrentFrameLayers();
+            gifFrames.SetFrame(imageBox.Source.ToBitmap(), 0);
+
+            for (int i = 1; i <= imageList[gifFrames.currentFrame].Count; i++)
+                gifFrames.SetFrame(imageList[gifFrames.currentFrame][i - 1].Source.ToBitmap(), i);
+
+            for (int i = 0; i < scrollViewerGrid.Children.Count; i++)
+                if (i != 0)
+                    scrollViewerGrid.Children.RemoveAt(i);
+
+            gifFrames.Next();
+            imageBox.Source = gifFrames.GetFrame(0).ToWritableBitmap();
+
+            for (int i = 0; i < imageList[gifFrames.currentFrame].Count; i++)
+                scrollViewerGrid.Children.Add(imageList[gifFrames.currentFrame][i]);
 
             if (!(gifFrames.currentFrame < gifFrames.frames.Count - 1))
                 nextFrame.IsEnabled = false;
@@ -160,10 +202,10 @@ namespace GIF_Editor
             }
         }
 
-        private void imageBox_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void scrollViewerGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             click = true;
-            startPoint = Mouse.GetPosition(imageBox);
+            startPoint = Mouse.GetPosition(selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1] : imageBox);
 
             if (eraserSelected || pencilSelected || lineSelected || paintbrushSelected)
             {
@@ -182,34 +224,34 @@ namespace GIF_Editor
                 {
                     pointOne = startPoint;
                     line = true;
-                    b = imageBox.Source as WriteableBitmap;
+                    b = selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1].Source as WriteableBitmap : imageBox.Source as WriteableBitmap;
                     b2 = b.ToBitmap();
                 }
             }
 
-            imageBox_MouseMove(sender, new MouseEventArgs(e.MouseDevice, e.Timestamp));
+            scrollViewerGrid_MouseMove(sender, new MouseEventArgs(e.MouseDevice, e.Timestamp));
         }
 
-        private void imageBox_MouseMove(object sender, MouseEventArgs e)
+        private void scrollViewerGrid_MouseMove(object sender, MouseEventArgs e)
         {
             if (click && pencilSelected)
             {
                 try
                 {
-                    b = imageBox.Source as WriteableBitmap;
-                    endPoint = Mouse.GetPosition(imageBox);
+                    b = selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1].Source as WriteableBitmap : imageBox.Source as WriteableBitmap;
+                    endPoint = Mouse.GetPosition(selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1] : imageBox);
                     b.DrawLine((int)startPoint.X, (int)startPoint.Y, (int)endPoint.X, (int)endPoint.Y, mainColor);
                     startPoint = endPoint;
                 }
                 catch { }
             }
-            
+
             if (click && eraserSelected)
             {
                 new Thread(() =>
                 {
-                    Application.Current.Dispatcher.Invoke((Action)(() => b = currentFrameLayers[selectedLayer].ToWritableBitmap()));
-                    Application.Current.Dispatcher.Invoke((Action)(() => endPoint = Mouse.GetPosition(imageBox)));
+                    Application.Current.Dispatcher.Invoke((Action)(() => b = selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1].Source as WriteableBitmap : imageBox.Source as WriteableBitmap));
+                    Application.Current.Dispatcher.Invoke((Action)(() => endPoint = Mouse.GetPosition(selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1] : imageBox)));
 
                     System.Windows.Media.Color color;
                     System.Windows.Point[] linePixels = FindPixels.Line(startPoint, endPoint).ToArray();
@@ -227,7 +269,7 @@ namespace GIF_Editor
                                 if (pixels[j][0][i] < pixelsEdited[0].Count() && pixels[j][0][i] >= 0 && pixels[j][1][i] < pixelsEdited.Count() && pixels[j][1][i] >= 0)
                                     if (!pixelsEdited[pixels[j][1][i]][pixels[j][0][i]])
                                     {
-                                        color = System.Windows.Media.Color.FromRgb(originalFrame.GetPixel(pixels[j][0][i], pixels[j][1][i]).R, originalFrame.GetPixel(pixels[j][0][i], pixels[j][1][i]).G, originalFrame.GetPixel(pixels[j][0][i], pixels[j][1][i]).B);
+                                        color = System.Windows.Media.Color.FromArgb(originalFrame.GetPixel(pixels[j][0][i], pixels[j][1][i]).A, originalFrame.GetPixel(pixels[j][0][i], pixels[j][1][i]).R, originalFrame.GetPixel(pixels[j][0][i], pixels[j][1][i]).G, originalFrame.GetPixel(pixels[j][0][i], pixels[j][1][i]).B);
 
                                         try
                                         {
@@ -236,10 +278,6 @@ namespace GIF_Editor
                                         }
                                         catch { }
                                     }
-
-                        gifFrames.SetFrame(b.ToBitmap(), selectedLayer);
-                        imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
-                        currentFrameLayers[selectedLayer] = b.ToBitmap();
                     }));
 
                     Application.Current.Dispatcher.Invoke((Action)(() => startPoint = endPoint));
@@ -248,7 +286,7 @@ namespace GIF_Editor
 
             if (click && dropperSelected)
             {
-                Bitmap currentFrame = gifFrames.GetFrame();
+                Bitmap currentFrame = selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1].Source.ToBitmap() : imageBox.Source.ToBitmap();
                 mainColor = System.Windows.Media.Color.FromArgb(currentFrame.GetPixel((int)startPoint.X, (int)startPoint.Y).A, currentFrame.GetPixel((int)startPoint.X, (int)startPoint.Y).R, currentFrame.GetPixel((int)startPoint.X, (int)startPoint.Y).G, currentFrame.GetPixel((int)startPoint.X, (int)startPoint.Y).B);
 
                 for (int x = 0; x < colorBitmap.Width; x++)
@@ -261,21 +299,21 @@ namespace GIF_Editor
 
             if (lineSelected && line)
             {
-                imageBox.Source = b2.ToWritableBitmap();
-                b = currentFrameLayers[selectedLayer].ToWritableBitmap();
-                b.DrawLineAa((int)pointOne.X, (int)pointOne.Y, (int)Mouse.GetPosition(imageBox).X, (int)Mouse.GetPosition(imageBox).Y, mainColor, thickness);
+                if (selectedLayer != 0)
+                    imageList[gifFrames.currentFrame][selectedLayer - 1].Source = b2.ToWritableBitmap();
+                else
+                    imageBox.Source = b2.ToWritableBitmap();
 
-                gifFrames.SetFrame(b.ToBitmap(), selectedLayer);
-                imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
-                currentFrameLayers[selectedLayer] = b.ToBitmap();
+                b = selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1].Source as WriteableBitmap : imageBox.Source as WriteableBitmap;
+                b.DrawLineAa((int)pointOne.X, (int)pointOne.Y, (int)Mouse.GetPosition(scrollViewerGrid).X, (int)Mouse.GetPosition(scrollViewerGrid).Y, mainColor, thickness);
             }
 
             if (click && paintbrushSelected)
             {
                 new Thread(() =>
                 {
-                    Application.Current.Dispatcher.Invoke((Action)(() => b = currentFrameLayers[selectedLayer].ToWritableBitmap()));
-                    Application.Current.Dispatcher.Invoke((Action)(() => endPoint = Mouse.GetPosition(imageBox)));
+                    Application.Current.Dispatcher.Invoke((Action)(() => b = selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1].Source as WriteableBitmap : imageBox.Source as WriteableBitmap));
+                    Application.Current.Dispatcher.Invoke((Action)(() => endPoint = Mouse.GetPosition(selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1] : imageBox)));
 
                     System.Windows.Point[] linePixels = FindPixels.Line(startPoint, endPoint).ToArray();
                     int[][][] pixels = new int[linePixels.Length][][];
@@ -285,22 +323,18 @@ namespace GIF_Editor
 
                     Application.Current.Dispatcher.Invoke((() =>
                     {
-                        for (int j = 0; j < pixels.Length; j++)
-                            for (int i = 0; i < pixels[j][0].Length; i++)
-                                if (pixels[j][0][i] < pixelsEdited[0].Count() && pixels[j][0][i] >= 0 && pixels[j][1][i] < pixelsEdited.Count() && pixels[j][1][i] >= 0)
-                                    if (!pixelsEdited[pixels[j][1][i]][pixels[j][0][i]])
+                    for (int j = 0; j < pixels.Length; j++)
+                        for (int i = 0; i < pixels[j][0].Length; i++)
+                            if (pixels[j][0][i] < pixelsEdited[0].Count() && pixels[j][0][i] >= 0 && pixels[j][1][i] < pixelsEdited.Count() && pixels[j][1][i] >= 0)
+                                if (!pixelsEdited[pixels[j][1][i]][pixels[j][0][i]])
+                                {
+                                    try
                                     {
-                                        try
-                                        {
-                                            b.SetPixel(pixels[j][0][i], pixels[j][1][i], mainColor);
-                                            pixelsEdited[pixels[j][1][i]][pixels[j][0][i]] = true;
-                                        }
-                                        catch { }
+                                        b.SetPixel(pixels[j][0][i], pixels[j][1][i], mainColor);
+                                        pixelsEdited[pixels[j][1][i]][pixels[j][0][i]] = true;
                                     }
-
-                        gifFrames.SetFrame(b.ToBitmap(), selectedLayer);
-                        imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
-                        currentFrameLayers[selectedLayer] = b.ToBitmap();
+                                    catch { }
+                                }
                     }));
 
                     Application.Current.Dispatcher.Invoke((Action)(() => startPoint = endPoint));
@@ -310,6 +344,7 @@ namespace GIF_Editor
 
         private void Main_MouseUp(object sender, MouseButtonEventArgs e)
         {
+            mainClick = false;
             click = false;
 
             if (line)
@@ -358,7 +393,10 @@ namespace GIF_Editor
                 thicknessSlider.Value--;
 
             if (e.Key == Key.I)
-                imageBox.Source = gifFrames.GetOriginalFrameLayers()[selectedLayer].ToWritableBitmap();
+                imageList[gifFrames.currentFrame][selectedLayer - 1].Source.ToBitmap().Save("E:\\Documents\\Test.png");
+
+            if (e.Key == Key.O)
+                imageBox.Source.ToBitmap().Save("E:\\Documents\\Test.jpg");
         }
 
         private void KeyRelease(object sender, KeyEventArgs e)
@@ -425,11 +463,15 @@ namespace GIF_Editor
             dropperSelected = false;
             lineSelected = false;
             paintbrushSelected = false;
+            resizeSelected = false;
+            rotateSelected = false;
 
             pencilButton.IsChecked = false;
             paintbrushButton.IsChecked = false;
             dropperButton.IsChecked = false;
             lineButton.IsChecked = false;
+            resizeButton.IsChecked = false;
+            rotateButton.IsChecked = false;
         }
 
         private void pencilButton_Click(object sender, RoutedEventArgs e)
@@ -439,11 +481,15 @@ namespace GIF_Editor
             dropperSelected = false;
             lineSelected = false;
             paintbrushSelected = false;
+            resizeSelected = false;
+            rotateSelected = false;
 
             paintbrushButton.IsChecked = false;
             eraserButton.IsChecked = false;
             dropperButton.IsChecked = false;
             lineButton.IsChecked = false;
+            resizeButton.IsChecked = false;
+            rotateButton.IsChecked = false;
         }
 
         private void dropperButton_Click(object sender, RoutedEventArgs e)
@@ -453,11 +499,15 @@ namespace GIF_Editor
             pencilSelected = false;
             lineSelected = false;
             paintbrushSelected = false;
+            resizeSelected = false;
+            rotateSelected = false;
 
             pencilButton.IsChecked = false;
             eraserButton.IsChecked = false;
             paintbrushButton.IsChecked = false;
             lineButton.IsChecked = false;
+            resizeButton.IsChecked = false;
+            rotateButton.IsChecked = false;
         }
 
         private void colorSelection_Click(object sender, RoutedEventArgs e)
@@ -496,13 +546,16 @@ namespace GIF_Editor
                     editAmount.Add(0);
                 }
 
-                imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
                 previousFrame.IsEnabled = false;
                 imageBox.Width = gifFrames.Width();
                 imageBox.Height = gifFrames.Height();
+                scrollViewerGrid.Width = gifFrames.Width();
+                scrollViewerGrid.Height = gifFrames.Height();
 
                 saveFilePath = path;
 
+                currentFrameLayers = gifFrames.GetCurrentFrameLayers();
+                imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
                 nextFrame.IsEnabled = gifFrames.frames.Count > 1;
                 frameTextBlock.Text = $"Frame: {gifFrames.currentFrame + 1} / {gifFrames.frames.Count}";
 
@@ -532,11 +585,15 @@ namespace GIF_Editor
             pencilSelected = false;
             eraserSelected = false;
             dropperSelected = false;
+            resizeSelected = false;
+            rotateSelected = false;
 
             pencilButton.IsChecked = false;
             eraserButton.IsChecked = false;
             dropperButton.IsChecked = false;
             paintbrushButton.IsChecked = false;
+            resizeButton.IsChecked = false;
+            rotateButton.IsChecked = false;
 
             lineSelected = !lineSelected;
             Mouse.OverrideCursor = null;
@@ -548,11 +605,15 @@ namespace GIF_Editor
             eraserSelected = false;
             dropperSelected = false;
             lineSelected = false;
+            resizeSelected = false;
+            rotateSelected = false;
 
             pencilButton.IsChecked = false;
             eraserButton.IsChecked = false;
             dropperButton.IsChecked = false;
             lineButton.IsChecked = false;
+            resizeButton.IsChecked = false;
+            rotateButton.IsChecked = false;
 
             paintbrushSelected = !paintbrushSelected;
             if (paintbrushSelected)
@@ -588,7 +649,15 @@ namespace GIF_Editor
 
         private void addlayerButton_Click(object sender, RoutedEventArgs e)
         {
-            gifFrames.AddLayer();
+            Bitmap foo = gifFrames.AddAndReturnLayer();
+            imageList[gifFrames.currentFrame].Add(new System.Windows.Controls.Image()
+            {
+                Source = foo.ToWritableBitmap(),
+                Width = imageBox.Width,
+                Height = imageBox.Height,
+                Opacity = 1
+            });
+
             nextFrame_Click(sender, e);
             previousFrame_Click(sender, e);
         }
@@ -598,14 +667,16 @@ namespace GIF_Editor
             nextFrame.Content = selectedLayer;
         }
 
-        private void imageBox_MouseLeave(object sender, MouseEventArgs e)
+        private void scrollViewerGrid_MouseLeave(object sender, MouseEventArgs e)
         {
-            Mouse.OverrideCursor = null;
+            if (!(resizeSelected || rotateSelected))
+                Mouse.OverrideCursor = null;
         }
 
-        private void imageBox_MouseEnter(object sender, MouseEventArgs e)
+        private void scrollViewerGrid_MouseEnter(object sender, MouseEventArgs e)
         {
-            Mouse.OverrideCursor = paintbrushSelected ? paintbrush : pencilSelected ? pencil : eraserSelected ? eraser : dropperSelected ? dropper : null;
+            if (!(resizeSelected || rotateSelected))
+                Mouse.OverrideCursor = paintbrushSelected ? paintbrush : pencilSelected ? pencil : eraserSelected ? eraser : dropperSelected ? dropper : null;
         }
 
         private void Main_Loaded(object sender, RoutedEventArgs e)
@@ -633,12 +704,56 @@ namespace GIF_Editor
 
         private void resizeButton_Click(object sender, RoutedEventArgs e)
         {
+            pencilSelected = false;
+            eraserSelected = false;
+            dropperSelected = false;
+            lineSelected = false;
+            paintbrushSelected = false;
+            rotateSelected = false;
 
+            pencilButton.IsChecked = false;
+            eraserButton.IsChecked = false;
+            dropperButton.IsChecked = false;
+            lineButton.IsChecked = false;
+            paintbrushButton.IsChecked = false;
+            rotateButton.IsChecked = false;
+
+            resizeSelected = !resizeSelected;
         }
 
         private void rotateButton_Click(object sender, RoutedEventArgs e)
         {
+            pencilSelected = false;
+            eraserSelected = false;
+            dropperSelected = false;
+            lineSelected = false;
+            paintbrushSelected = false;
+            resizeSelected = false;
 
+            pencilButton.IsChecked = false;
+            eraserButton.IsChecked = false;
+            dropperButton.IsChecked = false;
+            lineButton.IsChecked = false;
+            paintbrushButton.IsChecked = false;
+            resizeButton.IsChecked = false;
+
+            rotateSelected = !rotateSelected;
+        }
+
+        private void ScrollViewer_MouseMove(object sender, MouseEventArgs e)
+        {
+
+        }
+
+        public static void layerChanged()
+        {
+            
+        }
+
+        private void ScrollViewer_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            mainClick = true;
+            mainStartPoint = e.GetPosition(selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1] : imageBox);
         }
     }
 }

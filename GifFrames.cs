@@ -8,6 +8,8 @@ using System.Drawing.Imaging;
 using System.Windows.Media.Imaging;
 using System.IO;
 using System.Windows;
+using Point = System.Drawing.Point;
+using Size = System.Drawing.Size;
 using System.Threading;
 
 namespace GIF_Editor
@@ -18,6 +20,8 @@ namespace GIF_Editor
         List<List<Bitmap>> originalFrames = new List<List<Bitmap>>();
         public int currentFrame = 0;
         public int currentLayer = 0;
+        public List<List<Point>> layerPlacement = new List<List<Point>>();
+        Size mainSize;
 
 
         static Bitmap[] ToGifFrames(Bitmap b)
@@ -41,12 +45,16 @@ namespace GIF_Editor
         /// <param name="gifBitmap">The bitmap to change split into seperate frames</param>
         public GifFrames(Bitmap b)
         {
+            Point p = new Point(0, 0);
             Bitmap[] tempFrames = ToGifFrames(b);
+            mainSize = new Size(tempFrames[0].Width, tempFrames[0].Height);
 
             for (int i = 0; i < tempFrames.Length; i++)
             {
                 frames.Add(new List<Bitmap>());
                 frames[i].Add(tempFrames[i]);
+                layerPlacement.Add(new List<Point>());
+                layerPlacement[i].Add(p);
             }
 
             Bitmap[] tempFramesTwo = ToGifFrames(b);
@@ -64,12 +72,16 @@ namespace GIF_Editor
         /// <param name="gifFilePath"></param>
         public GifFrames(string filePath)
         {
+            Point p = new Point(0, 0);
             Bitmap[] tempFrames = ToGifFrames(new Bitmap(filePath));
+            mainSize = new Size(tempFrames[0].Width, tempFrames[0].Height);
 
             for (int i = 0; i < tempFrames.Length; i++)
             {
                 frames.Add(new List<Bitmap>());
                 frames[i].Add(tempFrames[i]);
+                layerPlacement.Add(new List<Point>());
+                layerPlacement[i].Add(p);
             }
 
             Bitmap[] tempFramesTwo = ToGifFrames(new Bitmap(filePath));
@@ -97,14 +109,10 @@ namespace GIF_Editor
                 return null;
         }
 
-        public Bitmap Next()
+        public void Next()
         {
-            if (!(currentFrame < frames.Count - 1))
-                return null;
-
             currentLayer = 0;
             currentFrame++;
-            return BitmapSharp.MergeBitmaps(frames[currentFrame].ToArray(), frames[0][0].Width, frames[0][0].Height);
         }
 
         /// <summary>
@@ -113,7 +121,7 @@ namespace GIF_Editor
         /// <returns>The current frame</returns>
         public Bitmap GetFrame()
         {
-            return BitmapSharp.MergeBitmaps(frames[currentFrame].ToArray(), frames[0][0].Width, frames[0][0].Height);
+            return BitmapSharp.MergeBitmaps(frames[currentFrame].ToArray(), frames[0][0].Width, frames[0][0].Height, layerPlacement[currentFrame].ToArray());
         }
 
         public Bitmap GetCurrentLayer()
@@ -132,6 +140,11 @@ namespace GIF_Editor
                 throw new IndexOutOfRangeException("The frameNumber must be within the GifFrames frame amount");
 
             return frames[frameNumber][layerNumber];
+        }
+
+        public Bitmap GetFrame(int layerNumber)
+        {
+            return frames[currentFrame][layerNumber];
         }
 
         /// <summary>
@@ -162,14 +175,10 @@ namespace GIF_Editor
                 return null;
         }
 
-        public Bitmap Previous()
+        public void Previous()
         {
-            if (!(currentFrame > 0))
-                return null;
-
             currentLayer = 0;
             currentFrame--;
-            return BitmapSharp.MergeBitmaps(frames[currentFrame].ToArray(), frames[0][0].Width, frames[0][0].Height);
         }
 
         /// <summary>
@@ -290,6 +299,23 @@ namespace GIF_Editor
                 frames[currentFrame].Add(new Bitmap(b.Width, b.Height, g));
                 originalFrames[currentFrame].Add(new Bitmap(b.Width, b.Height, g));
             }
+
+            layerPlacement[currentFrame].Add(new Point(0, 0));
+        }
+
+        public Bitmap AddAndReturnLayer()
+        {
+            Bitmap b = new Bitmap(frames[0][0].Width, frames[0][0].Height, PixelFormat.Format32bppArgb);
+
+            Graphics g = Graphics.FromImage(b);
+
+            g.FillRectangle(Brushes.Transparent, 0, 0, b.Width, b.Height);
+            frames[currentFrame].Add(new Bitmap(b.Width, b.Height, g));
+            originalFrames[currentFrame].Add(new Bitmap(b.Width, b.Height, g));
+
+
+            layerPlacement[currentFrame].Add(new Point(0, 0));
+            return new Bitmap(b.Width, b.Height, g);
         }
 
         /// <summary>
@@ -355,6 +381,17 @@ namespace GIF_Editor
         {
             frames[currentFrame].Add(layer);
             originalFrames[currentFrame].Add(layer);
+            layerPlacement[currentFrame].Add(new Point((Math.Abs(layer.Width - mainSize.Width)) / 2, (Math.Abs(layer.Height - mainSize.Height)) / 2));
+        }
+
+        public Point GetPoint()
+        {
+            return layerPlacement[currentFrame][currentLayer];
+        }
+
+        public void SetPoint(Point p)
+        {
+            layerPlacement[currentFrame][currentLayer] = p;
         }
     }
 }

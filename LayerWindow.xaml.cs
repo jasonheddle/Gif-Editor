@@ -57,6 +57,7 @@ namespace GIF_Editor
         private void layerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             MainWindow.selectedLayer = Math.Abs(layerList.SelectedIndex - layerList.Items.Count + 1);
+            MainWindow.layerChanged();
         }
 
         public void SetSelectedLayer(int layerIndex)

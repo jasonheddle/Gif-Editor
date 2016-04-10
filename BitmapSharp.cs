@@ -53,26 +53,30 @@ namespace GIF_Editor
         /// </summary>
         /// <param name="bitmaps"></param>
         /// <param name="size"></param>
+        /// <param name="placementPoints">Where the top left of the bitmap</param>
         /// <returns></returns>
-        public static Bitmap MergeBitmaps(Bitmap[] bitmaps, Size size)
+        public static Bitmap MergeBitmaps(Bitmap[] bitmaps, Size size, Point[] p)
         {
+            if (bitmaps.Length != p.Length)
+                throw new Exception("The amount of items in bitmaps and placementPoints must be the same!");
+
             Bitmap finalBitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppArgb);
             finalBitmap.MakeTransparent();
             using (Graphics g = Graphics.FromImage(finalBitmap))
             {
 
-                foreach (var bitmap in bitmaps)
+                for (int i = 0; i < bitmaps.Length; i++)
                 {
-                    g.DrawImage(bitmap, (size.Width - bitmap.Width) / 2, (size.Height - bitmap.Height) / 2);
+                    g.DrawImage(bitmaps[i], p[i].X, p[i].Y);
                 }
 
                 return finalBitmap;
             }
         }
 
-        public static Bitmap MergeBitmaps(Bitmap[] bitmaps, int width, int height)
+        public static Bitmap MergeBitmaps(Bitmap[] bitmaps, int width, int height, Point[] p)
         {
-            return MergeBitmaps(bitmaps, new Size(width, height));
+            return MergeBitmaps(bitmaps, new Size(width, height), p);
         }
     }
 }
