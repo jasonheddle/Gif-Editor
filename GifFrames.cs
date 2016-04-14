@@ -393,5 +393,17 @@ namespace GIF_Editor
         {
             layerPlacement[currentFrame][currentLayer] = p;
         }
+
+        public Bitmap CreateAndDisposeLayer()
+        {
+            Bitmap b = new Bitmap(frames[0][0].Width, frames[0][0].Height, PixelFormat.Format32bppArgb);
+
+            using (Graphics g = Graphics.FromImage(b))
+            {
+                g.FillRectangle(Brushes.Transparent, 0, 0, b.Width, b.Height);
+            }
+
+            return b;
+        }
     }
 }

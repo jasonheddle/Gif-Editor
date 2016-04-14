@@ -5,7 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GIF_Editor"
         mc:Ignorable="d"
-        Title="" Height="250" Width="200">
+        Title="" Height="250" Width="200"
+        WindowStartupLocation="Manual"
+        Top="400" Left="100">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition/>

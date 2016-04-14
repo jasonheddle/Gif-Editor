@@ -57,11 +57,14 @@ namespace GIF_Editor
         RoutedEventArgs routedEventArgs = new RoutedEventArgs();
         bool ctrlPress = false;
         WriteableBitmap b;
+        WriteableBitmap mainB;
+        int mainBWidth;
+        int mainBHeight;
         Bitmap b2;
         System.Windows.Point endPoint;
         bool click = false;
         System.Windows.Point startPoint;
-        static GifFrames gifFrames = new GifFrames(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) + "\\giphy.gif");
+        static GifFrames gifFrames;
         List<LinkedList<Bitmap>> undoList = new List<LinkedList<Bitmap>>();
         List<LinkedList<Bitmap>> redoList = new List<LinkedList<Bitmap>>();
         List<int> editAmount = new List<int>();
@@ -79,22 +82,11 @@ namespace GIF_Editor
         System.Windows.Point mainStartPoint;
         System.Windows.Point mainEndPoint;
         List<List<System.Windows.Controls.Image>> imageList = new List<List<System.Windows.Controls.Image>>();
+        bool appStart = true;
 
         public MainWindow()
         {
             InitializeComponent();
-
-            AddLayersToList();
-
-            frameTextBlock.Text = $"Frame: 1 / {gifFrames.frames.Count}";
-
-            for (int i = 0; i < gifFrames.frames.Count; i++)
-            {
-                undoList.Add(new LinkedList<Bitmap>());
-                redoList.Add(new LinkedList<Bitmap>());
-                editAmount.Add(0);
-                imageList.Add(new List<System.Windows.Controls.Image>());
-            }
 
             for (int x = 0; x < colorBitmap.Width; x++)
                 for (int y = 0; y < colorBitmap.Height; y++)
@@ -106,15 +98,21 @@ namespace GIF_Editor
             KeyUp += new KeyEventHandler(KeyRelease);
 
             Main.WindowState = WindowState.Maximized;
-            currentFrameLayers = gifFrames.GetCurrentFrameLayers();
-            imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
-            previousFrame.IsEnabled = false;
-            imageBox.Width = gifFrames.Width();
-            imageBox.Height = gifFrames.Height();
-            scrollViewerGrid.Width = gifFrames.Width();
-            scrollViewerGrid.Height = gifFrames.Height();
-            scrollViewerGrid.Width = gifFrames.Width();
-            scrollViewerGrid.Height = gifFrames.Height();
+            //currentFrameLayers = gifFrames.GetCurrentFrameLayers();
+            //imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
+            //previousFrame.IsEnabled = false;
+            //imageBox.Width = gifFrames.Width();
+            //imageBox.Height = gifFrames.Height();
+            //scrollViewerGrid.Width = gifFrames.Width();
+            //scrollViewerGrid.Height = gifFrames.Height();
+            //scrollViewerGrid.Width = gifFrames.Width();
+            //scrollViewerGrid.Height = gifFrames.Height();
+            new Thread(() =>
+            {
+                int i = 0;
+                openButton_Click(i, routedEventArgs);
+            }).Start();
+
             Current = this;
         }
 
@@ -130,9 +128,9 @@ namespace GIF_Editor
             for (int i = 1; i <= imageList[gifFrames.currentFrame].Count; i++)
                 gifFrames.SetFrame(imageList[gifFrames.currentFrame][i - 1].Source.ToBitmap(), i);
 
-            for (int i = 0; i < scrollViewerGrid.Children.Count; i++)
-                if (i != 0)
-                    scrollViewerGrid.Children.RemoveAt(i);
+            int childrenAmount = scrollViewerGrid.Children.Count;
+            for (int i = childrenAmount - 1; i < childrenAmount && i > 0; i--)
+                scrollViewerGrid.Children.RemoveAt(i);
 
             gifFrames.Previous();
             imageBox.Source = gifFrames.GetFrame(0).ToWritableBitmap();
@@ -165,9 +163,9 @@ namespace GIF_Editor
             for (int i = 1; i <= imageList[gifFrames.currentFrame].Count; i++)
                 gifFrames.SetFrame(imageList[gifFrames.currentFrame][i - 1].Source.ToBitmap(), i);
 
-            for (int i = 0; i < scrollViewerGrid.Children.Count; i++)
-                if (i != 0)
-                    scrollViewerGrid.Children.RemoveAt(i);
+            int childrenAmount = scrollViewerGrid.Children.Count;
+            for (int i = childrenAmount - 1; i < childrenAmount && i > 0; i--)
+                scrollViewerGrid.Children.RemoveAt(i);
 
             gifFrames.Next();
             imageBox.Source = gifFrames.GetFrame(0).ToWritableBitmap();
@@ -193,7 +191,12 @@ namespace GIF_Editor
             ctrlPress = false;
             click = false;
             gifFrames.SetAllLayers(currentFrameLayers);
-            SaveFileDialog saveFileDialog = new SaveFileDialog() { Filter = "Gif File (*.gif)|*.gif", InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) };
+            SaveFileDialog saveFileDialog = new SaveFileDialog()
+            {
+                Filter = "Gif File (*.gif)|*.gif",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures)
+            };
+
             if (saveFileDialog.ShowDialog() == true)
             {
                 string path = saveFileDialog.FileName;
@@ -383,7 +386,7 @@ namespace GIF_Editor
             if (e.Key == Key.Z && ctrlPress)
                 undoButton_Click(sender, routedEventArgs);
 
-            if (e.Key == Key.R && ctrlPress)
+            if (e.Key == Key.Y && ctrlPress)
                 redoButton_Click(sender, routedEventArgs);
 
             if (e.Key == Key.OemPlus)
@@ -533,35 +536,51 @@ namespace GIF_Editor
             OpenFileDialog openFileDialog = new OpenFileDialog() { Filter = "Gif File (*.gif)|*.gif", InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures) };
             if (openFileDialog.ShowDialog() == true)
             {
-                string path = openFileDialog.FileName;
-                gifFrames = new GifFrames(path);
-                undoList = new List<LinkedList<Bitmap>>();
-                redoList = new List<LinkedList<Bitmap>>();
-                editAmount = new List<int>();
-
-                for (int i = 0; i < gifFrames.frames.Count; i++)
+                Application.Current.Dispatcher.Invoke((() =>
                 {
-                    undoList.Add(new LinkedList<Bitmap>());
-                    redoList.Add(new LinkedList<Bitmap>());
-                    editAmount.Add(0);
-                }
+                    string path = openFileDialog.FileName;
+                    gifFrames = new GifFrames(path);
+                    undoList = new List<LinkedList<Bitmap>>();
+                    redoList = new List<LinkedList<Bitmap>>();
+                    editAmount = new List<int>();
+                    imageList = new List<List<System.Windows.Controls.Image>>();
 
-                previousFrame.IsEnabled = false;
-                imageBox.Width = gifFrames.Width();
-                imageBox.Height = gifFrames.Height();
-                scrollViewerGrid.Width = gifFrames.Width();
-                scrollViewerGrid.Height = gifFrames.Height();
+                    for (int i = 0; i < gifFrames.frames.Count; i++)
+                    {
+                        undoList.Add(new LinkedList<Bitmap>());
+                        redoList.Add(new LinkedList<Bitmap>());
+                        editAmount.Add(0);
+                        imageList.Add(new List<System.Windows.Controls.Image>());
+                    }
 
-                saveFilePath = path;
+                    previousFrame.IsEnabled = false;
+                    imageBox.Width = gifFrames.Width();
+                    imageBox.Height = gifFrames.Height();
+                    scrollViewerGrid.Width = gifFrames.Width();
+                    scrollViewerGrid.Height = gifFrames.Height();
 
-                currentFrameLayers = gifFrames.GetCurrentFrameLayers();
-                imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
-                nextFrame.IsEnabled = gifFrames.frames.Count > 1;
-                frameTextBlock.Text = $"Frame: {gifFrames.currentFrame + 1} / {gifFrames.frames.Count}";
+                    saveFilePath = path;
 
-                pixelsEdited = new bool[gifFrames.Height()][];
-                for (int i = 0; i < gifFrames.Height(); i++)
-                    pixelsEdited[i] = new bool[gifFrames.Width()];
+                    currentFrameLayers = gifFrames.GetCurrentFrameLayers();
+                    imageBox.Source = gifFrames.GetFrame().ToWritableBitmap();
+                    nextFrame.IsEnabled = gifFrames.frames.Count > 1;
+                    frameTextBlock.Text = $"Frame: {gifFrames.currentFrame + 1} / {gifFrames.frames.Count}";
+
+                    pixelsEdited = new bool[gifFrames.Height()][];
+                    for (int i = 0; i < gifFrames.Height(); i++)
+                        pixelsEdited[i] = new bool[gifFrames.Width()];
+
+                    AddLayersToList();
+                }));
+            }
+
+            else if (appStart)
+            {
+                Application.Current.Dispatcher.Invoke((() =>
+                {
+                    nextFrame.IsEnabled = false;
+                    previousFrame.IsEnabled = false;
+                }));
             }
         }
 
@@ -636,11 +655,25 @@ namespace GIF_Editor
             {
                 string path = openFileDialog.FileName;
                 Bitmap addImage = new Bitmap(path);
+                Bitmap backgroundImage = gifFrames.CreateAndDisposeLayer();
 
-                if (addImage.Width > imageBox.Width || addImage.Height > imageBox.Height)
+                if (addImage.Height > imageBox.Height)
                     addImage = addImage.Resize((int)(addImage.Width / (addImage.Height / imageBox.Height)), (int)(addImage.Height / (addImage.Height / imageBox.Height)));
+                if (addImage.Width > imageBox.Width)
+                    addImage = addImage.Resize((int)(addImage.Width / (addImage.Width / imageBox.Width)), (int)(addImage.Height / (addImage.Width / imageBox.Width)));
 
+                Bitmap[] bitmaps = { backgroundImage, addImage };
+                System.Drawing.Point[] points = { new System.Drawing.Point(0, 0), new System.Drawing.Point((int)(imageBox.Width - addImage.Width) / 2, (int)(imageBox.Height - addImage.Height) / 2) };
+                addImage = BitmapSharp.MergeBitmaps(bitmaps, (int)imageBox.Width, (int)imageBox.Height, points);
                 gifFrames.AddLayer(addImage);
+
+                imageList[gifFrames.currentFrame].Add(new System.Windows.Controls.Image()
+                {
+                    Source = addImage.ToWritableBitmap(),
+                    Width = imageBox.Width,
+                    Height = imageBox.Height,
+                    Stretch = Stretch.None
+                });
 
                 nextFrame_Click(sender, e);
                 previousFrame_Click(sender, e);
@@ -649,13 +682,12 @@ namespace GIF_Editor
 
         private void addlayerButton_Click(object sender, RoutedEventArgs e)
         {
-            Bitmap foo = gifFrames.AddAndReturnLayer();
             imageList[gifFrames.currentFrame].Add(new System.Windows.Controls.Image()
             {
-                Source = foo.ToWritableBitmap(),
+                Source = gifFrames.AddAndReturnLayer().ToWritableBitmap(),
                 Width = imageBox.Width,
                 Height = imageBox.Height,
-                Opacity = 1
+                Stretch = Stretch.None
             });
 
             nextFrame_Click(sender, e);
@@ -719,6 +751,10 @@ namespace GIF_Editor
             rotateButton.IsChecked = false;
 
             resizeSelected = !resizeSelected;
+
+            mainB = selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1].Source as WriteableBitmap : imageBox.Source as WriteableBitmap;
+            mainBWidth = (int)mainB.Width;
+            mainBHeight = (int)mainB.Height;
         }
 
         private void rotateButton_Click(object sender, RoutedEventArgs e)
@@ -742,18 +778,56 @@ namespace GIF_Editor
 
         private void ScrollViewer_MouseMove(object sender, MouseEventArgs e)
         {
+            if (resizeSelected)
+                Mouse.OverrideCursor = (e.GetPosition(imageBox).X < imageBox.Width / 2 && e.GetPosition(imageBox).Y < imageBox.Height / 2) || (e.GetPosition(imageBox).X > imageBox.Width / 2 && e.GetPosition(imageBox).Y > imageBox.Height / 2) ? resizeLeft : resizeRight;
 
+            if (resizeSelected && mainClick && (e.GetPosition(imageBox).X < imageBox.Width / 2 && e.GetPosition(imageBox).Y < imageBox.Height / 2))
+            {
+                mainEndPoint = e.GetPosition(imageBox);
+                int widthDif = (int)mainStartPoint.X - (int)mainEndPoint.X, heightDif = (int)mainStartPoint.Y - (int)mainEndPoint.Y;
+                b = mainB;
+                b = b.ToBitmap().Resize(mainBWidth + widthDif, mainBHeight + widthDif).ToWritableBitmap();
+                mainBHeight += widthDif;
+                mainBWidth += widthDif;
+
+                if (selectedLayer != 0)
+                    imageList[gifFrames.currentFrame][selectedLayer - 1].Source = b;
+                else
+                    imageBox.Source = b;
+
+                mainStartPoint = mainEndPoint;
+            }
         }
 
         public static void layerChanged()
         {
-            
+            Current.pixelsEdited = new bool[gifFrames.Height()][];
+            for (int i = 0; i < gifFrames.Height(); i++)
+                Current.pixelsEdited[i] = new bool[gifFrames.Width()];
+
+            Current.mainB = selectedLayer != 0 ? Current.imageList[gifFrames.currentFrame][selectedLayer - 1].Source as WriteableBitmap : Current.imageBox.Source as WriteableBitmap;
         }
 
         private void ScrollViewer_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             mainClick = true;
             mainStartPoint = e.GetPosition(selectedLayer != 0 ? imageList[gifFrames.currentFrame][selectedLayer - 1] : imageBox);
+        }
+
+        private void Main_StateChanged(object sender, EventArgs e)
+        {
+            switch (Current.WindowState)
+            {
+                case WindowState.Maximized:
+                    layerWindow.WindowState = WindowState.Normal;
+                    break;
+                case WindowState.Minimized:
+                    layerWindow.WindowState = WindowState.Minimized;
+                    break;
+                case WindowState.Normal:
+                    layerWindow.WindowState = WindowState.Normal;
+                    break;
+            }
         }
     }
 }

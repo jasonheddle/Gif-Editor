@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -11,6 +11,7 @@ using System.Threading;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Drawing.Drawing2D;
 
 namespace GIF_Editor
 {
@@ -214,14 +215,34 @@ namespace GIF_Editor
             return new Bitmap(image);
         }
 
-        public static Bitmap Resize(this Bitmap imgToResize, System.Drawing.Size size)
+        public static Bitmap Resize(this Bitmap image, System.Drawing.Size size)
         {
-            return new Bitmap(imgToResize, size);
+            var destRect = new Rectangle(0, 0, size.Width, size.Height);
+             var destImage = new Bitmap(size.Width, size.Height);
+
+            destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+
+            using (var graphics = Graphics.FromImage(destImage))
+            {
+                graphics.CompositingMode = CompositingMode.SourceCopy;
+                graphics.CompositingQuality = CompositingQuality.HighQuality;
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.SmoothingMode = SmoothingMode.None;
+                graphics.PixelOffsetMode = PixelOffsetMode.None;
+
+                using (var wrapMode = new ImageAttributes())
+                {
+                    wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                    graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+                }
+            }
+
+            return destImage;
         }
 
         public static Bitmap Resize(this Bitmap imgToResize, int width, int height)
         {
-            return new Bitmap(imgToResize, new System.Drawing.Size(width, height));
+            return imgToResize.Resize(new System.Drawing.Size(width, height));
         }
     }
 }

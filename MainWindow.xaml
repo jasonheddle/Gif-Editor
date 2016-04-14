@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="Gif Editor" Height="350" Width="525" x:Name="Main" MouseUp="Main_MouseUp"
         MouseLeave="Main_MouseLeave" MouseEnter="Main_MouseEnter"
-        Loaded="Main_Loaded" Closed="Main_Closed">
+        Loaded="Main_Loaded" Closed="Main_Closed" StateChanged="Main_StateChanged">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="20"/>
