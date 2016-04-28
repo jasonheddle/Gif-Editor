@@ -56,8 +56,9 @@ namespace GIF_Editor
 
         private void layerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            MainWindow.selectedLayer = Math.Abs(layerList.SelectedIndex - layerList.Items.Count + 1);
             MainWindow.layerChanged();
+            MainWindow.selectedLayer = Math.Abs(layerList.SelectedIndex - layerList.Items.Count + 1);
+            MainWindow.setMainB();
         }
 
         public void SetSelectedLayer(int layerIndex)
@@ -94,7 +95,7 @@ namespace GIF_Editor
 
         private void removeButton_Click(object sender, RoutedEventArgs e)
         {
-
+            MainWindow.removeLayer();
         }
 
         private void addButton_Click(object sender, RoutedEventArgs e)

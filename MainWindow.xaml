@@ -49,6 +49,7 @@
                 <Separator/>
                 <MenuItem Name="resizeButton" Header="_Resize" Click="resizeButton_Click" IsCheckable="True"/>
                 <MenuItem Name="rotateButton" Header="_Rotate" Click="rotateButton_Click" IsCheckable="True"/>
+                <MenuItem Name="moveButton" Header="_Move" Click="moveButton_Click" IsCheckable="True"/>
             </MenuItem>
         </Menu>
         <ScrollViewer Grid.Row="1" Grid.ColumnSpan="5" HorizontalScrollBarVisibility="Visible" MouseMove="ScrollViewer_MouseMove" PreviewMouseLeftButtonDown="ScrollViewer_PreviewMouseLeftButtonDown">

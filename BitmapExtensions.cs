@@ -215,6 +215,12 @@ namespace GIF_Editor
             return new Bitmap(image);
         }
 
+        /// <summary>
+        /// Resizes the given bitmap to the given size
+        /// </summary>
+        /// <param name="imgToResize"></param>
+        /// <param name="size"></param>
+        /// <returns>The resized bitmap</returns>
         public static Bitmap Resize(this Bitmap image, System.Drawing.Size size)
         {
             var destRect = new Rectangle(0, 0, size.Width, size.Height);
@@ -240,9 +246,40 @@ namespace GIF_Editor
             return destImage;
         }
 
+        /// <summary>
+        /// Resizes the given bitmap to the given size
+        /// </summary>
+        /// <param name="imgToResize"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <returns>The resized bitmap</returns>
         public static Bitmap Resize(this Bitmap imgToResize, int width, int height)
         {
             return imgToResize.Resize(new System.Drawing.Size(width, height));
+        }
+
+        /// <summary>
+        /// Crops the given bitmap the the given rectangle
+        /// </summary>
+        /// <param name="originalBitmap"></param>
+        /// <param name="cropArea"></param>
+        /// <returns></returns>
+        public static Bitmap Crop(this Bitmap b, Rectangle r)
+        {
+            Bitmap nb = new Bitmap(r.Width, r.Height);
+            Graphics g = Graphics.FromImage(nb);
+            g.DrawImage(b, -r.X, -r.Y);
+            return nb;
+        }
+
+        public static Bitmap Crop(this Bitmap crop, int x, int y, int width, int height)
+        {
+            return crop.Crop(new Rectangle(x, y, width, height));
+        }
+
+        public static Bitmap Crop(this Bitmap crop, System.Drawing.Point topLeft, int width, int height)
+        {
+            return crop.Crop(topLeft.X, topLeft.Y, width, height);
         }
     }
 }

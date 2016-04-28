@@ -49,12 +49,13 @@ namespace GIF_Editor
         }
 
         /// <summary>
-        /// Merges an array of bitmaps into one bitmap
+        /// Merges an array of bitmaps into one bitmap at the point in the point array that corresponds
+        /// to the current bitmap in the bitmap array
         /// </summary>
         /// <param name="bitmaps"></param>
         /// <param name="size"></param>
         /// <param name="placementPoints">Where the top left of the bitmap</param>
-        /// <returns></returns>
+        /// <returns>All the bitmaps merged into one</returns>
         public static Bitmap MergeBitmaps(Bitmap[] bitmaps, Size size, Point[] p)
         {
             if (bitmaps.Length != p.Length)
@@ -74,6 +75,15 @@ namespace GIF_Editor
             }
         }
 
+        /// <summary>
+        /// Merges an array of bitmaps into one bitmap at the point in the point array that corresponds
+        /// to 
+        /// </summary>
+        /// <param name="bitmaps"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="placementPoints"></param>
+        /// <returns>All the bitmaps merged into one</returns>
         public static Bitmap MergeBitmaps(Bitmap[] bitmaps, int width, int height, Point[] p)
         {
             return MergeBitmaps(bitmaps, new Size(width, height), p);

@@ -23,6 +23,29 @@ namespace GIF_Editor
         public List<List<Point>> layerPlacement = new List<List<Point>>();
         Size mainSize;
 
+        /// <summary>
+        /// GifFrames width
+        /// </summary>
+        public int Width
+        {
+            get { return frames[0][0].Width; }
+        }
+
+        /// <summary>
+        /// GifFrames height
+        /// </summary>
+        public int Height
+        {
+            get { return frames[0][0].Height; }
+        }
+
+        /// <summary>
+        /// GifFrames frame count
+        /// </summary>
+        public int Count
+        {
+            get { return frames.Count; }
+        }
 
         static Bitmap[] ToGifFrames(Bitmap b)
         {
@@ -188,24 +211,6 @@ namespace GIF_Editor
         public void SetFrame(Bitmap frame, int layer)
         {
             frames[currentFrame][layer] = frame;
-        }
-
-        /// <summary>
-        /// Gets the width of the gif in pixels
-        /// </summary>
-        /// <returns>Width of the gif in pixels</returns>
-        public int Width()
-        {
-            return frames[0][0].Width;
-        }
-
-        /// <summary>
-        /// Gets the height of the gif in pixels
-        /// </summary>
-        /// <returns>Height of gif in pixels</returns>
-        public int Height()
-        {
-            return frames[0][0].Height;
         }
 
         /// <summary>
